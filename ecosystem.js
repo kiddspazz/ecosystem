@@ -8,12 +8,13 @@ let ctx = canvas.getContext('2d');
 let imageData = ctx.getImageData(0, 0, W, H);
 
 let topo = new Array(H * W).fill({});
+let needRain = true;
 
 for (let i = 0; i < topo.length; i++) {
 	topo[i] = {
 		altitude: (1 - Math.random()/5),
 		water: 0
-	}
+	};
 }
 
 topo.draw = function() {
@@ -25,7 +26,7 @@ topo.draw = function() {
 			imageData.data[i * 4 + 3] = 255;
 		} else {
 			let color = findColor(topo[i].altitude);
-			imageData.data[i * 4] = Math.floor(color.r);
+			imageData.data[i * 4] = Math.floor(color.b);
 			imageData.data[i * 4 + 1] = Math.floor(color.g);
 			imageData.data[i * 4 + 3] = 255;
 		}
@@ -35,17 +36,20 @@ topo.draw = function() {
 
 function findColor(altitude) {
 	//colors from green to yellow to red as 0 --> 1
-	if (altitude < .33) {
-		return {r: 0, g: ((altitude/.35) * 200)};
-	}
 	if (altitude < .66) {
-		return {r: ((altitude - .33)/.33 * 255), g: ((altitude/.35) * 200)};
+		return {b: 0, g: (altitude * 255)};
 	}
-	return {r: 255, g: ((1 - altitude)/.33 * 255)};
+	return {b: 0, g: (altitude * 255)};
 }
 
 function rain() {
-	if (Math.random() > .97) {
+	if (needRain) {
+		topo.forEach(function(e, i) {
+			if (Math.random() > .6) {
+				e.water ++;
+			}
+		})
+	} else if (Math.random() > .999) {
 		console.log('It rained!');
 		topo.forEach(function(e, i) {
 			if (Math.random() > .8) {
@@ -53,48 +57,50 @@ function rain() {
 			}
 		});
 	}
+	needRain = true;
 }
 
 function drain() {
-	let oldWater = topo;
-	for (let i = 0; i < oldWater.length; i ++) {
-		if (oldWater[i].water) {
-			//n, ne, e, se, s, sw, w, nw
-			let d = [
-				i - W, i - W + 1, i + 1, i + W + 1, i + W, i + W - 1, i - 1, i - W - 1, i
-			];
-			moveTo = findLowerGround(i, d);
-			if (!moveTo) {
-				topo[i].water = 0
-			} else if (moveTo === 8) {
-				topo[i].water -= .02;
+	let oldTopo = Array.from(Object.assign(topo));
+	for (let i = 0; i < topo.length; i ++) {
+		if (topo[i].water) {
+			needRain = false;
+			if (
+				//is on the edge...
+				i/W < 1 ||
+				i/W > W - 1 ||
+				i%W === 0 ||
+				i%W === W -1
+			) {
+				topo[i].water = Math.max(0, topo[i].water - 1);
 			} else {
-				topo[i].water -= 1;
-				topo[i].altitude -= .01;
-				topo[d[moveTo]].water ++;
-			}
-		}
-	}
+				//n, ne, e, se, s, sw, w, nw
+				let d = [
+					i - W, i - W + 1, i + 1, i + W + 1, i + W, i + W - 1, i - 1, i - W - 1, i
+				];
+				moveTo = findLowerGround(i, d);
+				if (moveTo === 8) {
+					topo[i].water -= .2;
+				} else {
+					topo[d[moveTo]].water += topo[i].water;
+					topo[i].water = 0;
+					topo[i].altitude -= .001;
+				};
+			};
+		};
+	};
 
-	function findLowerGround(pixel, d) {
-		if (
-			pixel/W < 1 ||
-			pixel/W > W - 1 ||
-			pixel%W === 0 ||
-			pixel%W === W -1
-		) {
-			return false;
-		}
+	function findLowerGround(i, d) {
 		let neighbors = [
-			oldWater[d[0]].altitude + oldWater[d[0]].water/5,
-			oldWater[d[1]].altitude + oldWater[d[1]].water/5,
-			oldWater[d[2]].altitude + oldWater[d[2]].water/5,
-			oldWater[d[3]].altitude + oldWater[d[3]].water/5,
-			oldWater[d[4]].altitude + oldWater[d[4]].water/5,
-			oldWater[d[5]].altitude + oldWater[d[5]].water/5,
-			oldWater[d[6]].altitude + oldWater[d[6]].water/5,
-			oldWater[d[7]].altitude + oldWater[d[7]].water/5,
-			oldWater[d[8]].altitude + oldWater[d[8]].water/5
+			oldTopo[d[0]].altitude + oldTopo[d[0]].water/12,
+			oldTopo[d[1]].altitude + oldTopo[d[1]].water/12,
+			oldTopo[d[2]].altitude + oldTopo[d[2]].water/12,
+			oldTopo[d[3]].altitude + oldTopo[d[3]].water/12,
+			oldTopo[d[4]].altitude + oldTopo[d[4]].water/12,
+			oldTopo[d[5]].altitude + oldTopo[d[5]].water/12,
+			oldTopo[d[6]].altitude + oldTopo[d[6]].water/12,
+			oldTopo[d[7]].altitude + oldTopo[d[7]].water/12,
+			oldTopo[d[8]].altitude + oldTopo[d[8]].water/12
 		]
 		let lowest = 0;
 		for (let j = 0; j < neighbors.length; j ++) {
@@ -105,12 +111,10 @@ function drain() {
 }
 
 function tick() {
-	let now = new Date();
 	drain();
 	topo.draw();
 	rain();
-	console.log("it took " + (new Date() - now) + " ms to compute");
 };
 
 tick();
-//window.setInterval(tick, 100);
+//window.setInterval(tick, 80);
