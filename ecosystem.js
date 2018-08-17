@@ -36,8 +36,10 @@ topo.draw = function() {
 		} else if (topo[i].water > .001) {
 			imageData.data[i * 4] = 0;
 			imageData.data[i * 4 + 1] = 0;
-			imageData.data[i * 4 + 2] = Math.ceil((1 - (topo[i].water/.05)) * 155 + 100);
-			imageData.data[i * 4 + 3] = 150;
+			imageData.data[i * 4 + 2] = Math.max(
+				Math.ceil((1 - (topo[i].water/.1)) * 105 + 150), 150
+			);
+			imageData.data[i * 4 + 3] = 255;
 		} else {
 			let color = findColor(topo[i].altitude);
 			imageData.data[i * 4] = Math.floor(color.r);
@@ -72,26 +74,19 @@ function findColor(a) {
 }
 
 function rain() {
-	if (needRain || Math.random() > .999) {
-		console.log('It rained!');
-		topo.forEach(function(e) {
-			if (Math.random() > .5 && e.water < 1) {
-				e.water += .05;
-			}
-		})
-	}
-
-	needRain = true;
+	console.log('It rained!');
+	topo.forEach(function(e) {
+		if (Math.random() > (1 - e.altitude/5) && e.water < 1) {
+			e.water += .05;
+		}
+	})
 }
 
 function drain() {
 	let oldTopo = Array.from(Object.assign(topo));
 	for (let i = 0; i < topo.length; i ++) {
-		if (topo[i].water > topo[mostWater].water) {mostWater = i};
-		if (topo[i].altitude > topo[highest].altitude) {highest = i};
 		topo[i].water = Math.max(topo[i].water - .00001, 0);
 		if (topo[i].water) {
-			needRain = false;
 			if (
 				//is on the edge...
 				i/W < 1 ||
@@ -100,7 +95,7 @@ function drain() {
 				i%W === W - 1
 			) {
 				if (topo[i].altitude > 0) {
-					topo[i].altitude = Math.max(0, topo[i].altitude - topo[i].water);
+					topo[i].altitude = Math.max(0, topo[i].altitude - (.1 * topo[i].water));
 				}
 				topo[i].water = 0;
 
@@ -117,19 +112,28 @@ function drain() {
 
 				if (drop > 0) {
 					let waterTransfer = Math.min(drop/2, topo[i].water);
+
+					//transfer the water downhill
 					topo[downhill].water += waterTransfer;
 					topo[i].water -= waterTransfer;
+
+					//the water takes some of the dirt (altitude) downhill too
 					if (topo[i].altitude > 0) {
-						topo[i].altitude -= (.5 * waterTransfer)
+						topo[i].altitude = Math.max(
+							0, topo[i].altitude - (.1 * waterTransfer)
+						)
 					};
 					if (topo[downhill].altitude < 1) {
 						topo[downhill].altitude = Math.min(
-							1, topo[downhill].altitude + (.3 * waterTransfer)
-					)};
+							1, topo[downhill].altitude + (.06 * waterTransfer)
+						)
+					};
 
 				}
 			};
 		};
+		if (topo[i].water > topo[mostWater].water) {mostWater = i};
+		if (topo[i].altitude > topo[highest].altitude) {highest = i};
 	};
 
 	function biggestDrop(i, d) {
@@ -148,20 +152,23 @@ function drain() {
 	}
 }
 
+
 function findAltitude(i) {
+	return 1 - Math.random()/10
+	/*
 	let centeredW = Math.abs(W/2 - (Math.abs(i % W - W)));
 	let centeredH = Math.abs(H/2 - (Math.abs(Math.floor(i / W) - H)));
 	let max = (W/2) + (H/2);
 	let distFromCent = 1 - (max - (centeredW + centeredH))/max;
 	let thisAltitude = (1 - distFromCent/4.5 * (1 - Math.random()/5));
 	return thisAltitude;
+	*/
 }
 
+
 function tick() {
-//	let now = new Date();
 	drain();
 	topo.draw();
-	rain();
 /*	if (new Date() - now > 30) {
 		console.log(new Date() - now);
 		console.log(`highest: ${highest}: `);
@@ -173,4 +180,4 @@ function tick() {
 };
 
 tick();
-window.setInterval(tick, 20);
+window.setInterval(tick, 5);
