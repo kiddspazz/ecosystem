@@ -7,7 +7,6 @@ canvas.height = H;
 let ctx = canvas.getContext('2d');
 let imageData = ctx.getImageData(0, 0, W, H);
 let rainButton = document.getElementById('rain');
-console.log(rainButton);
 rainButton.onclick = rain;
 
 let topo = new Array(H * W).fill({});
