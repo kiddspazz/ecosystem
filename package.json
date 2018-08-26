@@ -1,0 +1,10 @@
+{
+  "name": "topoMap",
+  "devDependencies": {
+    "parcel-bundler": "^1.9.7"
+  },
+  "scripts": {
+    "serve": "./node_modules/.bin/parcel index.html"
+  },
+  "author": "Travis BoBavis Hortone"
+}
