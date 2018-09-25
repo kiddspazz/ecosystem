@@ -180,12 +180,10 @@ function findLowestNeighbor(i, map) {
 }
 
 function rain() {
-	for (let i = 0; i < state.map.length; i ++) {
-		if (isLucky()) {
-			state.map[i * 2 + 1] += 40;
-		}
+	for (let i = 0; i < W * H / 20; i ++) {
+		let randomSpot = Math.floor(Math.random() * W * H);
+		state.map[randomSpot * 2 + 1] += 40;
 	}
-	return false;
 };
 
 function stopStartRain() {
