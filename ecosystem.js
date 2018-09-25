@@ -19,14 +19,12 @@ function draw(map) {
 		if (hasWater(i * 2 + 1)) {
 			imageData.data[i * 4] = 0;
 			imageData.data[i * 4 + 1] = 0;
-			imageData.data[i * 4 + 2] = Math.max(
-				Math.ceil(map[i * 2 + 1]), 150
-			);
+			imageData.data[i * 4 + 2] = Math.max(map[i * 2 + 1], 150);
 		} else {
 			let color = findColor(map[i * 2]);
-			imageData.data[i * 4] = Math.floor(color.r);
-			imageData.data[i * 4 + 1] = Math.floor(color.g);
-			imageData.data[i * 4 + 2] = Math.floor(color.b);
+			imageData.data[i * 4] = color.r;
+			imageData.data[i * 4 + 1] = color.g;
+			imageData.data[i * 4 + 2] = color.b;
 		}
 		imageData.data[i * 4 + 3] = 255;
 	}
