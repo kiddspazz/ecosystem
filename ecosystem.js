@@ -23,7 +23,7 @@ function draw(map) {
 				Math.ceil(map[i * 2 + 1]), 150
 			);
 		} else {
-			let color = findColor(map[i * 2]/255);
+			let color = findColor(map[i * 2]);
 			imageData.data[i * 4] = Math.floor(color.r);
 			imageData.data[i * 4 + 1] = Math.floor(color.g);
 			imageData.data[i * 4 + 2] = Math.floor(color.b);
@@ -38,20 +38,20 @@ function draw(map) {
 function findColor(a) {
 	//returns a color based on altitude (0-255), low being green, going through yellow, red, then white
 	let color = {r: 0, g: 0, b: 0}
-	if (a < .2) {
-		color.g = (a/.2 * 155 + 100);
-	} else if (a < .4) {
-		color.r = ((a - .2)/.2 * 255);
+	if (a < 52) {
+		color.g = (a/51 * 155 + 100);
+	} else if (a < 103) {
+		color.r = ((a - 51)/51 * 255);
 		color.g = (255);
-	} else if (a < .6) {
-		color.r = ((-(a - .6)/.2 * 100 + 155));
-		color.g = (-(a - .6)/.2 * 255);
-	} else if (a < .8) {
+	} else if (a < 154) {
+		color.r = ((-(a - 154)/51 * 100 + 155));
+		color.g = (-(a - 154)/51 * 255);
+	} else if (a < 205) {
 		color.r = 155;
-		color.b = ((a - .6)/.2 * 155);
+		color.b = ((a - 154)/51 * 155);
 	} else {
 		color.r = 155;
-		color.g = ((a - .8)/.2 * 155);
+		color.g = ((a - 205)/51 * 155);
 		color.b = 155;
 	}
 	return color;
