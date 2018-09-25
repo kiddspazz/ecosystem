@@ -198,11 +198,6 @@ function stopStartRain() {
 	}
 }
 
-function isLucky() {
-	if (Math.random() > .95) return true
-	return false;
-}
-
 for (let i = 0; i < H * W; i++) {
 	state.map[i * 2] = 255 * (1 - Math.random()/10)
 }
