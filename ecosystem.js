@@ -1,60 +1,42 @@
-const H = 400;
-const W = 400;
-const canvasCenter = {x: W/2, y: H/2};
+const H = 600;
+const W = 600;
+const RAIN_BUTTON = document.getElementById('rain');
+RAIN_BUTTON.onclick = stopStartRain;
+let canRain = true;
+
 let canvas = document.getElementById('canvas');
 canvas.width = W;
 canvas.height = H;
 let ctx = canvas.getContext('2d');
 let imageData = ctx.getImageData(0, 0, W, H);
-let rainButton = document.getElementById('rain');
-rainButton.onclick = rain;
+let state = {
+	map: new Uint8ClampedArray(2 * W * H),
+	nextMap: new Uint8ClampedArray(2 * W * H)
+};
 
-let topo = new Array(H * W).fill({});
-let needRain = true;
-
-let highest = 0;
-let mostWater = 0;
-
-for (let i = 0; i < topo.length; i++) {
-	topo[i] = {
-		// altitude 0 - 1
-		altitude: findAltitude(i),
-		water: 0
-	};
-}
-
-topo.draw = function() {
-	for (let i = 0; i < topo.length; i++) {
-		if (i === highest) {
-			imageData.data[i * 4] = 255;
-			imageData.data[i * 4 + 1] = 255;
-			imageData.data[i * 4 + 2] = 255;
-			imageData.data[i * 4 + 3] = 255;
-		} else if (i === mostWater) {
-			imageData.data[i * 4] = 0;
-			imageData.data[i * 4 + 1] = 0;
-			imageData.data[i * 4 + 2] = 0;
-			imageData.data[i * 4 + 3] = 255;
-		} else if (topo[i].water > .001) {
+function draw(map) {
+	for (let i = 0; i < map.length/2; i++) {
+		if (hasWater(i * 2 + 1)) {
 			imageData.data[i * 4] = 0;
 			imageData.data[i * 4 + 1] = 0;
 			imageData.data[i * 4 + 2] = Math.max(
-				Math.ceil((1 - (topo[i].water/.1)) * 105 + 150), 150
+				Math.ceil(map[i * 2 + 1]), 150
 			);
-			imageData.data[i * 4 + 3] = 255;
 		} else {
-			let color = findColor(topo[i].altitude);
+			let color = findColor(map[i * 2]/255);
 			imageData.data[i * 4] = Math.floor(color.r);
 			imageData.data[i * 4 + 1] = Math.floor(color.g);
 			imageData.data[i * 4 + 2] = Math.floor(color.b);
-			imageData.data[i * 4 + 3] = 255;
 		}
+		imageData.data[i * 4 + 3] = 255;
 	}
 
-   ctx.putImageData(imageData, 0, 0);
+	ctx.putImageData(imageData, 0, 0);
+
 }
 
 function findColor(a) {
+	//returns a color based on altitude (0-255), low being green, going through yellow, red, then white
 	let color = {r: 0, g: 0, b: 0}
 	if (a < .2) {
 		color.g = (a/.2 * 155 + 100);
@@ -73,114 +55,167 @@ function findColor(a) {
 		color.b = 155;
 	}
 	return color;
+};
+
+function update(map) {
+	state.map = drain(map);
 }
 
-function rain() {
-	console.log('It rained!');
-	topo.forEach(function(e) {
-		if (Math.random() > (1 - e.altitude/5) && e.water < 1) {
-			e.water += .05;
+function getAltitude(map, i) {
+	return map[i*2];
+}
+
+function setAltitude(map, i, val) {
+	map[i*2] = val;
+}
+
+function getWater(map, i) {
+	return map[i*2 + 1];
+}
+
+function setWater(map, i, val) {
+	map[i*2 + 1] = val;
+}
+
+
+function drain(map) {
+	let newMap = new Uint8ClampedArray(2 * W * H)
+
+	for (let i = 0; i < map.length/2; i++) {
+		//i * 2 === altitude, i * 2 + 1 === water
+		newMap[i * 2] += map[i * 2];
+		newMap[i * 2 + 1] += map[i * 2 + 1];
+
+		if (hasWater(i * 2 + 1)) {
+			let move = moveWater(i, map);
+
+			if (move.dir === i) {
+				//if this location is lower than all around it -- dirt settles (altitude increases)
+				newMap[i * 2] += 1;
+				newMap[i * 2 + 1] -= 1;
+				continue
+			}
+
+			if (typeof(move.dir) === "string") {
+				//move water out of current location
+				newMap[i * 2 + 1] -= 1;
+				//erode current location
+				newMap[i * 2] -= 1;
+			}
+
+			if (typeof(move.dir) === "number") {
+				//move water out of current location
+				newMap[i * 2 + 1] -= move.amount;
+				//erode current location
+				newMap[i * 2] -= 1;
+				//move water to downhill location
+				newMap[move.dir * 2 + 1] += move.amount;
+				//move a little dirt to downhill location
+			}
 		}
-	})
+	}
+
+	return newMap;
+};
+
+function hasWater(i) {
+	if (state.map[i] > 0) return true
 	return false;
 }
 
-function drain() {
-	let oldTopo = Array.from(Object.assign(topo));
-	for (let i = 0; i < topo.length; i ++) {
-		topo[i].water = Math.max(topo[i].water - .00001, 0);
-		if (topo[i].water) {
-			if (
-				//is on the edge...
-				i/W < 1 ||
-				i/W > W - 1 ||
-				i%W === 0 ||
-				i%W === W - 1
-			) {
-				if (topo[i].altitude > 0) {
-					topo[i].altitude = Math.max(0, topo[i].altitude - (.1 * topo[i].water));
-				}
-				topo[i].water = 0;
+function moveWater(i, map) {
+	let onEdge = getEdgeCondition(i);
+	if (onEdge) {
+		return {amount: map[i * 2 + 1], dir: onEdge}
+	}
 
-			} else {
-				//n, ne, e, se, s, sw, w, nw
-				let cardinals = [
-					i - W, i - W + 1, i + 1, i + W + 1, i + W, i + W - 1, i - 1, i - W - 1
-				];
-				let downhill = cardinals[biggestDrop(i, cardinals)];
-				let drop = (
-					(oldTopo[i].altitude + oldTopo[i].water) -
-					(oldTopo[downhill].altitude + oldTopo[downhill].water)
-				);
+	let lowestNeighbor = findLowestNeighbor(i, map);
+	//lowestNeighbor = {direction: index, altitudeDelta: 0-255}
 
-				if (drop > 0) {
-					let waterTransfer = Math.min(drop/2, topo[i].water);
-
-					//transfer the water downhill
-					topo[downhill].water += waterTransfer;
-					topo[i].water -= waterTransfer;
-
-					//the water takes some of the dirt (altitude) downhill too
-					if (topo[i].altitude > 0) {
-						topo[i].altitude = Math.max(
-							0, topo[i].altitude - (.1 * waterTransfer)
-						)
-					};
-					if (topo[downhill].altitude < 1) {
-						topo[downhill].altitude = Math.min(
-							1, topo[downhill].altitude + (.06 * waterTransfer)
-						)
-					};
-
-				}
-			};
-		};
-		if (topo[i].water > topo[mostWater].water) {mostWater = i};
-		if (topo[i].altitude > topo[highest].altitude) {highest = i};
+	return {
+		amount: Math.min(map[i * 2 + 1], Math.floor(lowestNeighbor.drop/2)),
+		dir: lowestNeighbor.index
 	};
-
-	function biggestDrop(i, d) {
-		let start = oldTopo[i].altitude + oldTopo[i].water;
-		let neighbors = [];
-		for (let nabenum = 0; nabenum < 8; nabenum ++) {
-			neighbors[nabenum] = (
-				start - (oldTopo[d[nabenum]].altitude + oldTopo[d[nabenum]].water)
-			)
-		}
-		let biggestDrop = 0;
-		for (let j = 0; j < neighbors.length; j ++) {
-			if (neighbors[j] > neighbors[biggestDrop]) {biggestDrop = j}
-		}
-		return (biggestDrop);
-	}
 }
 
+function getEdgeCondition(index) {
+	let row = Math.ceil(index/W);
+	let column = index%W + 1;
 
-function findAltitude(i) {
-	return 1 - Math.random()/10
-	/*
-	let centeredW = Math.abs(W/2 - (Math.abs(i % W - W)));
-	let centeredH = Math.abs(H/2 - (Math.abs(Math.floor(i / W) - H)));
-	let max = (W/2) + (H/2);
-	let distFromCent = 1 - (max - (centeredW + centeredH))/max;
-	let thisAltitude = (1 - distFromCent/4.5 * (1 - Math.random()/5));
-	return thisAltitude;
-	*/
+	if (row === 1 && column === 1) return "NW"
+	if (row === 1 && column === W) return "NE"
+	if (row === H && column === 1) return "SW"
+	if (row === H && column === W) return "SE"
+	if (row === 1) return "N"
+	if (row === H) return "S"
+	if (column === 1) return "W"
+	if (column === W) return "E"
+
+	return false;
 }
 
+function findLowestNeighbor(i, map) {
+	let cardinals = [
+		i - W,
+		i - W + 1,
+		i + 1,
+		i + W + 1,
+		i + W,
+		i + W - 1,
+		i - 1,
+		i - W - 1
+	];
+	let startHeight = map[i * 2] + map[i * 2 + 1];
+	let biggestDrop = 0;
+	let lowestDirection = i;
 
-function tick() {
-	drain();
-	topo.draw();
-/*	if (new Date() - now > 30) {
-		console.log(new Date() - now);
-		console.log(`highest: ${highest}: `);
-		console.log(topo[highest]);
-		console.log(`mostWater: ${mostWater}: `);
-		console.log(topo[mostWater]);
+	for (let j = 0; j < cardinals.length; j++) {
+		let thisDirectionHeight = map[cardinals[j] * 2] + map[cardinals[j] * 2 + 1]
+		let currentDrop = startHeight - thisDirectionHeight;
+		if (currentDrop > biggestDrop) {
+			biggestDrop = currentDrop;
+			lowestDirection = cardinals[j];
+		}
 	}
-	*/
+
+	return {index: lowestDirection, drop: biggestDrop};
+}
+
+function rain() {
+	for (let i = 0; i < state.map.length; i ++) {
+		if (isLucky()) {
+			state.map[i * 2 + 1] += 40;
+		}
+	}
+	return false;
 };
 
+function stopStartRain() {
+	canRain = !canRain;
+	let p = document.getElementById("status");
+	if (canRain) {
+		RAIN_BUTTON.innerText = "stop rain";
+		p.innerText = "raining randomly";
+	} else {
+		RAIN_BUTTON.innerText = "start rain";
+		p.innerText = "not raining";
+	}
+}
+
+function isLucky() {
+	if (Math.random() > .95) return true
+	return false;
+}
+
+for (let i = 0; i < H * W; i++) {
+	state.map[i * 2] = 255 * (1 - Math.random()/10)
+}
+
 tick();
-window.setInterval(tick, 5);
+
+function tick() {
+	draw(state.map);
+	update(state.map);
+	if (Math.random() > .91 && canRain) rain();
+	window.requestAnimationFrame(tick);
+};
