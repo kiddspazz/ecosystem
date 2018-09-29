@@ -1,5 +1,5 @@
-const H = 600;
-const W = 600;
+const H = 400;
+const W = 400;
 const RAIN_BUTTON = document.getElementById('rain');
 RAIN_BUTTON.onclick = stopStartRain;
 let canRain = true;
@@ -78,7 +78,6 @@ function drain(map) {
 		let self = map[i];
 		if (self.alt < state.map[lowestSpot].alt) {
 			lowestSpot = i;
-			console.log(i, self.alt);
 		};
 		if (self.needsUpdate) {
 			self.needsUpdate = false;
@@ -94,11 +93,11 @@ function drain(map) {
 			let move = moveWater(self, i);
 
 			if (move.dir === i) {
-				self.altChange += Math.min(3, altMax - self.alt);
+				//self.altChange += Math.min(.01, altMax - self.alt);
 			}
 
 			else if (typeof(move.dir) === "string") {
-				self.altChange -= Math.min(self.alt, 5);
+				self.altChange -= Math.min(self.alt, 2);
 				self.waterChange -= move.amount;
 				self.needsDraw = true;
 			}
@@ -106,17 +105,18 @@ function drain(map) {
 			else {
 				actualMoveAmount = Math.min(move.amount, self.water)
 				self.waterChange -= actualMoveAmount;
-				self.altChange -= Math.min(2, altMax - self.alt);
+				self.altChange -= Math.min(1, altMax - self.alt);
 				self.needsDraw = true;
 				let lowerSpot = state.map[move.dir]
 				lowerSpot.waterChange += actualMoveAmount;
-				lowerSpot.altChange += Math.min(3, altMax - lowerSpot.alt)
+				//lowerSpot.altChange += Math.min(1, altMax - lowerSpot.alt)
 				lowerSpot.needsDraw = true;
 				let nabe1 = state.map[move.leftNabe];
-				nabe1.altChange -= Math.min(1, altMax - nabe1.alt);
+				nabe1.altChange -= Math.min(.1, altMax - nabe1.alt);
 				nabe1.needsDraw = true;
 				let nabe2 = state.map[move.rightNabe];
-				nabe2.altChange -= Math.min(1, altMax - nabe2.alt);
+				nabe2.altChange -= Math.min(.1, altMax - nabe2.alt);
+				nabe2.needsDraw = true;
 			}
 		}
 	}
@@ -131,7 +131,7 @@ function moveWater(self, i) {
 
 	let lowestNeighbor = findLowestNeighbor(self, i);
 
-	if (lowestNeighbor.drop > 4) {
+	if (lowestNeighbor.drop > 7) {
 		return {
 			amount: lowestNeighbor.drop/2,
 			dir: lowestNeighbor.index,
