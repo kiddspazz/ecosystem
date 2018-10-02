@@ -109,13 +109,13 @@ function drain(map) {
 				self.needsDraw = true;
 				let lowerSpot = state.map[move.dir]
 				lowerSpot.waterChange += actualMoveAmount;
-				//lowerSpot.altChange += Math.min(1, altMax - lowerSpot.alt)
+				lowerSpot.altChange += Math.min(.4, altMax - lowerSpot.alt)
 				lowerSpot.needsDraw = true;
 				let nabe1 = state.map[move.leftNabe];
-				nabe1.altChange -= Math.min(.1, altMax - nabe1.alt);
+				nabe1.altChange -= Math.min(.3, altMax - nabe1.alt);
 				nabe1.needsDraw = true;
 				let nabe2 = state.map[move.rightNabe];
-				nabe2.altChange -= Math.min(.1, altMax - nabe2.alt);
+				nabe2.altChange -= Math.min(.3, altMax - nabe2.alt);
 				nabe2.needsDraw = true;
 			}
 		}
