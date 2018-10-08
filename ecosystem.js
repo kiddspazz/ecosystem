@@ -1,5 +1,5 @@
-const H = 400;
-const W = 400;
+const H = 600;
+const W = 600;
 const RAIN_BUTTON = document.getElementById('rain');
 RAIN_BUTTON.onclick = stopStartRain;
 let canRain = true;
