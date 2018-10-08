@@ -3,7 +3,7 @@ const W = 600;
 const RAIN_BUTTON = document.getElementById('rain');
 RAIN_BUTTON.onclick = stopStartRain;
 let canRain = true;
-let altMax = 1000;
+let altMax = 255;
 let lowestSpot = altMax;
 
 let canvas = document.getElementById('canvas');
@@ -12,21 +12,33 @@ canvas.height = H;
 let ctx = canvas.getContext('2d');
 let imageData = ctx.getImageData(0, 0, W, H);
 let state = {
-	map: new Array(W * H).fill({})
+	map: new Uint8ClampedArray(W * H * 4)
 };
+
+function getAlt(i) {
+	return state.map[i * 4];
+}
+
+function setAlt(i, val) {
+	state.map[i * 4] = val
+}
+
+function getWater(i) {
+	return state.map[i * 4 + 2];
+}
+
+function setWater(i, val) {
+	state.map[i * 4 + 2] = val;
+}
 
 function draw(map) {
 	for (let i = 0; i < W * H; i++) {
-		let self = map[i];
-		self.needsUpdate = true;
-		if (self.needsDraw) {
-				let newWater = self.water + self.waterChange;
-				let newAlt = self.alt + self.altChange;
-				let color = findColor(newWater, newAlt);
-				imageData.data[i * 4] = color.r;
-				imageData.data[i * 4 + 1] = color.g;
-				imageData.data[i * 4 + 2] = color.b;
-			}
+		let newWater = self.water + self.waterChange;
+		let newAlt = self.alt + self.altChange;
+		let color = findColor(newWater, newAlt);
+		imageData.data[i * 4] = color.r;
+		imageData.data[i * 4 + 1] = color.g;
+		imageData.data[i * 4 + 2] = color.b;
 		imageData.data[i * 4 + 3] = 255
 		self.needsDraw = false;
 	}
