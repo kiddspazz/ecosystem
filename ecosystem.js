@@ -85,6 +85,7 @@ function drain(map) {
 
 			if (move.dir === i) {
 				//maybe we'll add altitude here...
+				//changeAlt(i, 2);
 
 			} else if (typeof(move.dir) === "string") {
 				changeAlt(i, -24);
@@ -95,6 +96,8 @@ function drain(map) {
 				changeAlt(i, -18);
 				changeWater(move.dir, move.amount);
 				changeAlt(move.dir, 2);
+				changeAlt(move.leftNabe, -12);
+				changeAlt(move.rightNabe, -12);
 
 			}
 		}
@@ -114,7 +117,7 @@ function moveWater(i) {
 
 	let lowestNeighbor = findLowestNeighbor(i);
 
-	if (lowestNeighbor.drop > 2) {
+	if (lowestNeighbor.drop > 4) {
 		return {
 			amount: lowestNeighbor.drop/2,
 			dir: lowestNeighbor.index,
