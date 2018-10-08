@@ -183,7 +183,7 @@ function stopStartRain() {
 }
 
 for (let i = 0; i < H * W; i++) {
-	let thisAlt = Math.floor(altMax * (1 - Math.random()/10));
+	let thisAlt = Math.floor(altMax * (1 - Math.random()/5));
 	state.map[i * 4] = thisAlt;
 	state.map[i * 4 + 1] = 128;
 	state.map[i * 4 + 2] = 0;
