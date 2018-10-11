@@ -1,5 +1,5 @@
-const H = 600;
-const W = 600;
+const H = 400;
+const W = 400;
 const RAIN_BUTTON = document.getElementById('rain');
 RAIN_BUTTON.onclick = stopStartRain;
 let canRain = true;
@@ -12,41 +12,42 @@ canvas.height = H;
 let ctx = canvas.getContext('2d');
 let imageData = ctx.getImageData(0, 0, W, H);
 let state = {
-	map: new Uint8ClampedArray(W * H * 4)
+	map: new Uint8ClampedArray(W * H * 2),
+	changesToMap: new Uint8ClampedArray(W * H * 2)
 };
 
 function getAlt(i) {
-	return state.map[i * 4];
+	return state.map[i * 2];
 }
 
 function changeAlt(i, val) {
-	state.map[i * 4 + 1] += val;
+	state.changesToMap[i * 2] += val;
 }
 
 function getWater(i) {
-	return state.map[i * 4 + 2];
+	return state.map[i * 2 + 1];
 }
 
 function changeWater(i, val) {
-	state.map[i * 4 + 3] += val;
+	state.changesToMap[i * 2 + 1] += val;
 }
 
-function update(i) {
-	if (state.map[i * 4 + 1] === 255) {
-		state.map[i * 4] += 1;
-		state.map[i * 4 + 1] = 128;
+function addChanges(i) {
+	if (state.changesToMap[i * 2] === 255) {
+		state.map[i * 2] += 1;
+		state.changesToMap[i * 2] = 128;
 	}
-	if (state.map[i * 4 + 1] === 0) {
-		state.map[i * 4] -= 1;
-		state.map[i * 4 + 1] = 128;
+	if (state.changesToMap[i * 2] === 0) {
+		state.map[i * 2] -= 1;
+		state.changesToMap[i * 2] = 128;
 	}
-	if (state.map[i * 4 + 3] !== 128) {
-		state.map[i * 4 + 2] += (state.map[i * 4 + 3] - 128);
-		state.map[i * 4 + 3] = 128;
+	if (state.changesToMap[i * 2 + 1] !== 128) {
+		state.map[i * 2 + 1] += (state.changesToMap[i * 2 + 1] - 128);
+		state.changesToMap[i * 2 + 1] = 128;
 	}
 }
 
-function draw(map) {
+function draw() {
 	for (let i = 0; i < W * H; i++) {
 		let waterColor = getWater(i);
 		if (waterColor > 0) {
@@ -77,11 +78,25 @@ let cardinals = {
 	SW: {fromSelf: W-1, leftNabe: W, rightNabe: -1}
 }
 
-function drain(map) {
-	for (let i = 0; i < W * H + (W + 2); i++) {
+let move = {
+	amount: 0,
+	dir: 0,
+	leftNabe: 0,
+	rightNabe: 0
+}
+
+let lowestNeighbor = {
+	index: 0,
+	drop: 0,
+	leftNabe: 0,
+	rightNabe: 0
+}
+
+function drain() {
+	for (let i = 0; i < W * H; i++) {
 		let thisWater = getWater(i);
-		if (map[i] !== undefined && thisWater > 0) {
-			let move = moveWater(i);
+		if (state.map[i] !== undefined && thisWater > 0) {
+			moveWater(i);
 
 			if (move.dir === i) {
 				//maybe we'll add altitude here...
@@ -101,10 +116,10 @@ function drain(map) {
 
 			}
 		}
+	}
 
-		if (map[i - (W + 2)] !== undefined) {
-			update(i - (W + 2));
-		}
+	for (let i = 0; i < W * H; i++) {
+		addChanges(i);
 	}
 };
 
@@ -112,20 +127,25 @@ function moveWater(i) {
 	let r = Math.floor(i/W + 1);
 	let c = i%W + 1;
 	if (r === 1 || r === H || c === 1 || c === W) {
-		return {amount: getWater(i), dir: getEdge(r, c)}
+		move.amount = getWater(i);
+		move.dir = getEdge(r, c);
+		move.leftNabe = null;
+		move.rightNabe = null;
+		return;
 	}
 
-	let lowestNeighbor = findLowestNeighbor(i);
+	findLowestNeighbor(i);
 
 	if (lowestNeighbor.drop > 4) {
-		return {
-			amount: lowestNeighbor.drop/2,
-			dir: lowestNeighbor.index,
-			leftNabe: lowestNeighbor.leftNabe,
-			rightNabe: lowestNeighbor.rightNabe
-		};
+		move.amount = lowestNeighbor.drop/2;
+		move.dir = lowestNeighbor.index;
+		move.leftNabe = lowestNeighbor.leftNabe;
+		move.rightNabe = lowestNeighbor.rightNabe;
 	} else {
-		return {amount: 0, dir: i}
+		move.amount = 0;
+		move.dir = i;
+		move.leftNabe = null;
+		move.rightNabe = null;
 	}
 }
 
@@ -156,12 +176,10 @@ function findLowestNeighbor(i) {
 
 	let drop = (getAlt(i) + getWater(i)) - lowestH;
 
-	return {
-		index: i + cardinals[lowestD].fromSelf,
-		drop: drop,
-		leftNabe: i + cardinals[lowestD].leftNabe,
-		rightNabe: i + cardinals[lowestD].rightNabe
-	};
+	lowestNeighbor.index = i + cardinals[lowestD].fromSelf;
+	lowestNeighbor.drop = drop;
+	lowestNeighbor.leftNabe = i + cardinals[lowestD].leftNabe;
+	lowestNeighbor.rightNabe = i + cardinals[lowestD].lrightNabe;
 }
 
 function rain() {
@@ -187,19 +205,17 @@ function stopStartRain() {
 
 for (let i = 0; i < H * W; i++) {
 	let thisAlt = Math.floor(altMax * (1 - Math.random()/5));
-	state.map[i * 4] = thisAlt;
-	state.map[i * 4 + 1] = 128;
-	state.map[i * 4 + 2] = 0;
-	state.map[i * 4 + 3] = 128;
+	state.map[i * 2] = thisAlt;
+	state.changesToMap[i * 2] = 128;
+	state.map[i * 2 + 1] = 0;
+	state.changesToMap[i * 2 + 1] = 128;
 }
 
 tick();
 
 function tick() {
-	drain(state.map);
-	draw(state.map);
+	drain();
+	draw();
 	if (canRain) rain();
 	window.requestAnimationFrame(tick);
 };
-
-//window.setInterval(tick, 1000);
