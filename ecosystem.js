@@ -12,7 +12,7 @@ canvas.height = H;
 let ctx = canvas.getContext('2d');
 let imageData = ctx.getImageData(0, 0, W, H);
 let state = {
-	map: new Array(W * H).fill({})
+	map: new Array(W * H)
 };
 
 function draw(map) {
@@ -226,7 +226,7 @@ for (let i = 0; i < H * W; i++) {
 tick();
 
 function tick() {
-	draw(state.map)
+	draw(state.map);
 	drain(state.map);
 	if (canRain) rain();
 	window.requestAnimationFrame(tick);
